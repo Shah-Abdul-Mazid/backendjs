@@ -1,4 +1,3 @@
-// index.js
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -50,27 +49,65 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --- API Routes ---
 app.get('/hello', (req, res) => res.send('Hello, world!'));
 
-// Return JSON data for locations
+// Return JSON data for buses
 app.get('/data', async (req, res) => {
   try {
-    const snapshot = await rtdb.ref('location').once('value');
+    const snapshot = await rtdb.ref('buses').once('value');
     const items = snapshot.val();
     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
     res.json({ items: itemsArray });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Failed to fetch locations' });
+    res.status(500).json({ message: 'Failed to fetch buses' });
+  }
+});
+
+// Return JSON data for bus locations
+app.get('/bus-locations-data', async (req, res) => {
+  try {
+    const snapshot = await rtdb.ref('bus_locations').once('value');
+    const items = snapshot.val();
+    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+    res.json({ items: itemsArray });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch bus locations' });
+  }
+});
+
+// Add bus via API POST
+app.post('/add-bus', async (req, res) => {
+  const { bus_id, name } = req.body;
+  try {
+    await rtdb.ref('buses').push({ bus_id, name });
+    res.redirect('/bus-locations');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to add bus');
   }
 });
 
 // Add location via API POST
 app.post('/add-location', async (req, res) => {
+  const { bus_id, latitude, longitude } = req.body;
   try {
-    const newRef = await rtdb.ref('location').push(req.body);
-    res.status(201).json({ message: 'Location added', id: newRef.key });
+    await rtdb.ref('bus_locations').push({ bus_id, latitude, longitude });
+    res.redirect('/bus-locations');
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Failed to add location' });
+    res.status(500).send('Failed to add location');
+  }
+});
+
+// Add bus location with recorded_at via API POST
+app.post('/submit-bus-location', async (req, res) => {
+  const { bus_id, latitude, longitude, recorded_at } = req.body;
+  try {
+    await rtdb.ref('bus_locations').push({ bus_id, latitude, longitude, recorded_at });
+    res.redirect('/bus-locations');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to submit bus location');
   }
 });
 
@@ -78,33 +115,27 @@ app.post('/add-location', async (req, res) => {
 // Home page
 app.get('/', (req, res) => res.render('home'));
 
-// Locations table page
-app.get('/locations', async (req, res) => {
+// Bus locations page
+app.get('/bus-locations', async (req, res) => {
   try {
-    const snapshot = await rtdb.ref('location').once('value');
+    const snapshot = await rtdb.ref('bus_locations').once('value');
     const items = snapshot.val();
     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
     res.render('location', { locations: itemsArray }); // Ensure file is location.ejs
   } catch (err) {
     console.error(err);
-    res.status(500).send('Failed to load locations');
+    res.status(500).send('Failed to load bus locations');
   }
 });
+
+// Add bus form page
+app.get('/add-bus-form', (req, res) => res.render('add-bus-form'));
 
 // Add location form page
 app.get('/add-location-form', (req, res) => res.render('add-location'));
 
-// Handle location submission from form
-app.post('/submit-location', async (req, res) => {
-  const { name, lat, lng } = req.body;
-  try {
-    await rtdb.ref('location').push({ name, lat, lng });
-    res.redirect('/locations');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Failed to submit location');
-  }
-});
+// Add bus location form page
+app.get('/add-bus-location', (req, res) => res.render('add-bus-location'));
 
 // About page
 app.get('/about', (req, res) => res.render('about'));
