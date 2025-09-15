@@ -18,8 +18,8 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON');
     process.exit(1);
   }
-} else if (fs.existsSync(path.join(__dirname, 'src', 'serviceAccountKey.json'))) {
-  serviceAccount = require(path.join(__dirname, 'src', 'serviceAccountKey.json'));
+} else if (fs.existsSync(path.join(__dirname, 'serviceAccountKey.json'))) {
+  serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
 } else {
   console.error('❌ No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT_KEY or add serviceAccountKey.json locally.');
   process.exit(1);
@@ -39,10 +39,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // --- Views setup ---
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'src', 'views'));
+app.set('views', path.join(__dirname, 'views'));
 
 // --- Static files ---
-app.use(express.static(path.join(__dirname, 'src', 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // --- API Routes ---
 

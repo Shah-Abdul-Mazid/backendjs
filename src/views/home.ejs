@@ -2,15 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .hero-section {
+      background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://source.unsplash.com/1600x400/?map,location');
+      background-size: cover;
+      background-position: center;
+      color: white;
+      padding: 100px 0;
+      text-align: center;
+    }
+    .hero-section h1 {
+      font-size: 3rem;
+      font-weight: bold;
+    }
+    .feature-card {
+      transition: transform 0.3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-10px);
+    }
+    .carousel-img {
+      height: 400px;
+      object-fit: cover;
+    }
+  </style>
 </head>
 <body>
   <%- include('partials/navbar') %>
 
-  <div class="container mt-5">
-    <h1>Welcome to the Location App</h1>
-    <p>This app helps manage and view location data easily.</p>
-  </div>
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <h1>Welcome to the Location App</h1>
+      <p class="lead">Discover, manage, and explore location data with ease.</p>
+      <a href="/locations" class="btn btn-primary btn-lg mt-3">View Locations</a>
+      <a href="/add-location-form" class="btn btn-outline-light btn-lg mt-3">Add a New Location</a>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="container my-5">
+    <h2 class="text-center mb-4">Why Use Our App?</h2>
+    <div class="row">
+      <div class="col-md-4 mb-4">
+        <div class="card feature-card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Easy Management</h5>
+            <p class="card-text">Add and view locations seamlessly with our intuitive interface.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card feature-card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Real-Time Updates</h5>
+            <p class="card-text">Stay updated with live data from our Firebase backend.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card feature-card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Responsive Design</h5>
+            <p class="card-text">Access the app from any device with a modern, responsive layout.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Image Carousel Section -->
+  <section class="container my-5">
+    <h2 class="text-center mb-4">Explore Locations</h2>
+    <div id="locationCarousel" class="carousel slide" data-bs-ride="carousel">
+      <div class="carousel-inner">
+        <div class="carousel-item active">
+          <img src="https://source.unsplash.com/1200x400/?city" class="d-block w-100 carousel-img" alt="City Location">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>Urban Adventures</h5>
+            <p>Explore city landmarks and hotspots.</p>
+          </div>
+        </div>
+        <div class="carousel-item">
+          <img src="https://source.unsplash.com/1200x400/?nature" class="d-block w-100 carousel-img" alt="Nature Location">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>Nature Escapes</h5>
+            <p>Discover serene outdoor locations.</p>
+          </div>
+        </div>
+        <div class="carousel-item">
+          <img src="https://source.unsplash.com/1200x400/?travel" class="d-block w-100 carousel-img" alt="Travel Destination">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>Travel Destinations</h5>
+            <p>Plan your next trip with our app.</p>
+          </div>
+        </div>
+      </div>
+      <button class="carousel-control-prev" type="button" data-bs-target="#locationCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#locationCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
