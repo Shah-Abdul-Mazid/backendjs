@@ -35,7 +35,7 @@ app.set('view engine', 'ejs'); // Set EJS as templating engine
 
 // /hello route
 app.get('/hello', (req, res) => {
-  res.send('Hello, world!!!');
+  res.send('Hello, world! Kire Soytan Prottoy kmn aso!!!');
 });
 
 // /data route
