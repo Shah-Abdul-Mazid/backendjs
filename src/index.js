@@ -79,7 +79,16 @@ app.get('/bus-locations-data', async (req, res) => {
 app.post('/add-bus', async (req, res) => {
   const { bus_id, name } = req.body;
   try {
-    await rtdb.ref('buses').push({ bus_id, name });
+    // Check if 'buses' reference exists, create if it doesn't
+    const busesRef = rtdb.ref('buses');
+    const snapshot = await busesRef.once('value');
+    if (!snapshot.exists()) {
+      await busesRef.set({}); // Create empty object to initialize the reference
+      // Redirect back to the form to allow insertion
+      return res.redirect('/add-bus-form');
+    }
+    // If table exists, proceed with insertion
+    await busesRef.push({ bus_id, name });
     res.redirect('/bus-locations');
   } catch (err) {
     console.error(err);
@@ -91,7 +100,13 @@ app.post('/add-bus', async (req, res) => {
 app.post('/add-location', async (req, res) => {
   const { bus_id, latitude, longitude } = req.body;
   try {
-    await rtdb.ref('bus_locations').push({ bus_id, latitude, longitude });
+    // Check if 'bus_locations' reference exists, create if it doesn't
+    const locationsRef = rtdb.ref('bus_locations');
+    const snapshot = await locationsRef.once('value');
+    if (!snapshot.exists()) {
+      await locationsRef.set({}); // Create empty object to initialize the reference
+    }
+    await locationsRef.push({ bus_id, latitude, longitude });
     res.redirect('/bus-locations');
   } catch (err) {
     console.error(err);
@@ -103,7 +118,13 @@ app.post('/add-location', async (req, res) => {
 app.post('/submit-bus-location', async (req, res) => {
   const { bus_id, latitude, longitude, recorded_at } = req.body;
   try {
-    await rtdb.ref('bus_locations').push({ bus_id, latitude, longitude, recorded_at });
+    // Check if 'bus_locations' reference exists, create if it doesn't
+    const locationsRef = rtdb.ref('bus_locations');
+    const snapshot = await locationsRef.once('value');
+    if (!snapshot.exists()) {
+      await locationsRef.set({}); // Create empty object to initialize the reference
+    }
+    await locationsRef.push({ bus_id, latitude, longitude, recorded_at });
     res.redirect('/bus-locations');
   } catch (err) {
     console.error(err);
