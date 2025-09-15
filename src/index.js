@@ -36,40 +36,6 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Authentication middleware
-const authenticate = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized: No token provided' });
-  }
-
-  const token = authHeader.split('Bearer ')[1];
-
-  // Check for special admin token bypass
-  if (token === 'admin-token-123') {
-    req.user = { uid: 'admin', isAdmin: true, email: 'admin' };
-    return next();
-  }
-
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-  } catch (err) {
-    console.error('Error verifying token:', err);
-    res.status(401).json({ message: 'Unauthorized: Invalid token' });
-  }
-};
-
-// Admin-only middleware
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Forbidden: Admin access required' });
-  }
-};
-
 // --- Views setup ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -77,32 +43,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- API Routes ---
 
-// Return JSON data for locations (original, secured)
-app.get('/data', authenticate, async (req, res) => {
-  try {
-    const snapshot = await rtdb.ref('location').once('value');
-    const items = snapshot.val();
-    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
-    res.json({ items: itemsArray });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to fetch locations' });
-  }
-});
-
-// Add location via API POST (original, secured)
-app.post('/add-location', authenticate, async (req, res) => {
-  try {
-    const newRef = await rtdb.ref('location').push(req.body);
-    res.status(201).json({ message: 'Location added', id: newRef.key });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to add location' });
-  }
-});
-
-// Admin: Add a new bus
-app.post('/admin/add-bus', authenticate, isAdmin, async (req, res) => {
+// Add a new bus (no auth)
+app.post('/admin/add-bus', async (req, res) => {
   try {
     const { bus_id, name } = req.body;
 
@@ -131,8 +73,8 @@ app.post('/admin/add-bus', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// Admin: Deactivate a bus
-app.put('/admin/deactivate-bus/:busId', authenticate, isAdmin, async (req, res) => {
+// Deactivate a bus (no auth)
+app.put('/admin/deactivate-bus/:busId', async (req, res) => {
   try {
     const { busId } = req.params;
 
@@ -153,8 +95,8 @@ app.put('/admin/deactivate-bus/:busId', authenticate, isAdmin, async (req, res) 
   }
 });
 
-// Add bus location (admin or user)
-app.post('/add-bus-location', authenticate, async (req, res) => {
+// Add bus location (no auth)
+app.post('/add-bus-location', async (req, res) => {
   try {
     const { bus_id, latitude, longitude, recorded_at } = req.body;
 
@@ -184,8 +126,8 @@ app.post('/add-bus-location', authenticate, async (req, res) => {
   }
 });
 
-// Get latest bus location (admin or user)
-app.get('/bus-location/:busId', authenticate, async (req, res) => {
+// Get latest bus location (no auth)
+app.get('/bus-location/:busId', async (req, res) => {
   try {
     const busId = req.params.busId;
 
@@ -232,45 +174,15 @@ app.get('/bus-location/:busId', authenticate, async (req, res) => {
   }
 });
 
-// --- Website Routes ---
-
-// Home page (public)
+// Home page
 app.get('/', (req, res) => res.render('home'));
 
-// Locations table page (secured)
-app.get('/locations', authenticate, async (req, res) => {
-  try {
-    const snapshot = await rtdb.ref('location').once('value');
-    const items = snapshot.val();
-    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
-    res.render('location', { locations: itemsArray });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Failed to load locations');
-  }
-});
-
-// Add location form page (secured)
-app.get('/add-location-form', authenticate, (req, res) => res.render('add-location'));
-
-// Handle location submission from form (secured)
-app.post('/submit-location', authenticate, async (req, res) => {
-  const { name, lat, lng } = req.body;
-  try {
-    await rtdb.ref('location').push({ name, lat, lng });
-    res.redirect('/locations');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Failed to submit location');
-  }
-});
-
-// List all buses and their locations (admin or user)
-app.get('/bus-locations', authenticate, async (req, res) => {
+// List all buses and their locations (no auth)
+app.get('/bus-locations', async (req, res) => {
   try {
     const busesSnapshot = await rtdb.ref('buses').once('value');
     const locationsSnapshot = await rtdb.ref('bus_locations').once('value');
-    
+
     const buses = busesSnapshot.val() || {};
     const locations = locationsSnapshot.val() || {};
 
@@ -287,20 +199,20 @@ app.get('/bus-locations', authenticate, async (req, res) => {
           : []
       }));
 
-    res.render('bus-locations', { buses: busesArray, isAdmin: req.user.isAdmin || false });
+    res.render('bus-locations', { buses: busesArray, isAdmin: false });
   } catch (err) {
     console.error('Error rendering bus locations:', err);
     res.status(500).send('Failed to load bus locations');
   }
 });
 
-// Admin: Add bus form
-app.get('/admin/add-bus-form', authenticate, isAdmin, (req, res) => {
+// Add bus form (no auth)
+app.get('/admin/add-bus-form', (req, res) => {
   res.render('add-bus');
 });
 
-// Admin: Handle bus submission from form
-app.post('/admin/submit-bus', authenticate, isAdmin, async (req, res) => {
+// Handle bus submission from form (no auth)
+app.post('/admin/submit-bus', async (req, res) => {
   try {
     const { bus_id, name } = req.body;
 
@@ -329,13 +241,13 @@ app.post('/admin/submit-bus', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// Add location form (admin or user)
-app.get('/add-bus-location-form', authenticate, (req, res) => {
+// Add location form (no auth)
+app.get('/add-bus-location-form', (req, res) => {
   res.render('add-bus-location');
 });
 
-// Handle location submission from form (admin or user)
-app.post('/submit-bus-location', authenticate, async (req, res) => {
+// Handle location submission from form (no auth)
+app.post('/submit-bus-location', async (req, res) => {
   try {
     const { bus_id, latitude, longitude, recorded_at } = req.body;
 
@@ -356,16 +268,15 @@ app.post('/submit-bus-location', authenticate, async (req, res) => {
 
     res.redirect('/bus-locations');
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Failed to submit bus location');
+    console.error('Error adding bus location:', err);
+    res.status(500).send('Failed to add bus location');
   }
 });
 
-// --- Start server ---
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-// Serve auth.js for client-side authentication handling
-app.get('/auth.js', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'auth.js'));
-});
+// About page
+app.get('/about', (req, res) => res.render('about'));
+
+// Remove login routes completely (no login needed)
+
+// --- Start Server ---
+app.listen(PORT, () => console.log(`✅ Running at http://localhost:${PORT}`));
