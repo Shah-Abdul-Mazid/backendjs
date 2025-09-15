@@ -52,7 +52,7 @@ app.get('/hello', (req, res) => res.send('Hello, world!'));
 // Return JSON data for buses
 app.get('/data', async (req, res) => {
   try {
-    const snapshot = await rtdb.ref('buses').once('value');
+    const snapshot = await rtdb.ref('location').once('value');
     const items = snapshot.val();
     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
     res.json({ items: itemsArray });
