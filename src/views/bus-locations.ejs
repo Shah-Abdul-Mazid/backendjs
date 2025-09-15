@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bus Locations</title>
+  <script src="/auth.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    h2 { margin-top: 20px; }
+    a { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Bus Locations</h1>
+  <% if (isAdmin) { %>
+    <a href="/admin/add-bus-form">Add New Bus</a>
+  <% } %>
+  <a href="/add-bus-location-form">Add Bus Location</a>
+  <a href="/about">About</a>
+  <% buses.forEach(bus => { %>
+    <h2><%= bus.name %> (<%= bus.bus_id %>)</h2>
+    <table>
+      <tr>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Recorded At</th>
+      </tr>
+      <% bus.locations.forEach(loc => { %>
+        <tr>
+          <td><%= loc.latitude %></td>
+          <td><%= loc.longitude %></td>
+          <td><%= loc.recorded_at %></td>
+        </tr>
+      <% }) %>
+    </table>
+  <% }) %>
+</body>
+</html>

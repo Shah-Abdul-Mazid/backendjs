@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Bus Location</title>
+  <script src="/auth.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .form-container { max-width: 400px; }
+    input, select { margin: 10px 0; padding: 8px; width: 100%; }
+    button { padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #218838; }
+    a { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Add Bus Location</h1>
+  <form action="/submit-bus-location" method="POST" class="form-container">
+    <label for="bus_id">Bus ID:</label>
+    <input type="text" id="bus_id" name="bus_id" required>
+    <label for="latitude">Latitude:</label>
+    <input type="number" id="latitude" name="latitude" step="any" required>
+    <label for="longitude">Longitude:</label>
+    <input type="number" id="longitude" name="longitude" step="any" required>
+    <label for="recorded_at">Recorded At (optional, ISO format):</label>
+    <input type="text" id="recorded_at" name="recorded_at" placeholder="e.g., 2025-09-15T22:06:00Z">
+    <button type="submit">Add Location</button>
+  </form>
+  <a href="/bus-locations">Back to Bus Locations</a>
+</body>
+</html>
