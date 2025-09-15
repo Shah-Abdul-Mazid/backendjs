@@ -9,10 +9,12 @@
   "author": "Shah Abdul Mazid",
   "license": "ISC",
   "dependencies": {
+    "@ngrok/ngrok": "^1.5.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
     "mysql2": "^3.14.5"
   }
 }

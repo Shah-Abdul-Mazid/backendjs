@@ -1,67 +1,76 @@
+// server.js
 const express = require('express');
-const mysql = require('mysql2');
+const admin = require('firebase-admin');
+const cors = require('cors');
+const path = require('path');
+const bodyParser = require('body-parser');
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// MySQL connection configuration
-const db = mysql.createConnection({
-  host: '127.0.0.1',
-  user: 'root',
-  password: 'root',
-  database: 'test_data',
-  port: 3306
+// --- Firebase Init ---
+const serviceAccount = require('./serviceAccountKey.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://test-56b2b-default-rtdb.firebaseio.com'
 });
+const rtdb = admin.database();
 
-// Connect to MySQL
-db.connect((err) => {
-  if (err) {
-    console.error('Error connecting to MySQL:', err);
-    return;
-  }
-  console.log('Connected to MySQL database');
-});
-
-// Middleware
+// --- Middleware ---
+app.use(cors());
 app.use(express.json());
-app.set('view engine', 'ejs'); // Set EJS as the templating engine
+app.use(bodyParser.urlencoded({ extended: true }));
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views')); // ✅ only once
+app.use(express.static(path.join(__dirname, 'public')));
 
-// /hello route
-app.get('/hello', (req, res) => {
-  res.send('Hello, world! Kire Soytan Prottoy kmn aso!!!');
+// --- API Routes ---
+// Test route
+app.get('/hello', (req, res) => res.send('Hello, world!'));
+
+// Fetch data as JSON
+app.get('/data', async (req, res) => {
+  const snapshot = await rtdb.ref('locations').once('value');
+  const items = snapshot.val();
+  const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+  res.json({ items: itemsArray });
 });
 
-// /data route (rendering HTML table instead of JSON)
-app.get('/data', (req, res) => {
-  const query = 'SELECT * FROM locations'; // Adjust if your table name differs
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error('Error executing query:', err);
-      return res.status(500).send('Database query failed');
-    }
-    // Render EJS template with table data
-    res.render('data', { message: 'This is your data endpoint', items: results });
-  });
+// Add new location via API
+app.post('/add-location', async (req, res) => {
+  const newRef = await rtdb.ref('locations').push(req.body);
+  res.status(201).json({ message: 'Location added', id: newRef.key });
 });
 
-// /check-db route
-app.get('/check-db', (req, res) => {
-  db.ping((err) => {
-    if (err) {
-      console.error('MySQL connection failed:', err);
-      return res.status(500).json({ 
-        status: 'disconnected', 
-        message: 'Failed to connect to MySQL database' 
-      });
-    }
-    res.json({ 
-      status: 'connected', 
-      message: 'Successfully connected to MySQL database' 
-    });
-  });
+// --- Website Routes ---
+// Welcome page
+app.get('/', (req, res) => {
+  res.render('home');
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-}
-);
+// Locations page
+app.get('/locations', async (req, res) => {
+  const snapshot = await rtdb.ref('locations').once('value');
+  const items = snapshot.val();
+  const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+  res.render('locations', { locations: itemsArray });
+});
+
+// Add location form
+app.get('/add-location-form', (req, res) => {
+  res.render('add-location');
+});
+
+app.post('/submit-location', async (req, res) => {
+  const { name, lat, lng } = req.body;
+  await rtdb.ref('locations').push({ name, lat, lng });
+  res.redirect('/locations');
+});
+
+// About page
+app.get('/about', (req, res) => {
+  res.render('about');
+});
+
+// --- Start Server ---
+app.listen(PORT, () => console.log(`✅ Running at http://localhost:${PORT}`));
