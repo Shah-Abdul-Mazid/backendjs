@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 // --- Firebase Init ---
-const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://test-56b2b-default-rtdb.firebaseio.com'
