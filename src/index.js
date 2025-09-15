@@ -1,30 +1,11 @@
-// index.js
 const express = require('express');
 const admin = require('firebase-admin');
-const cors = require('cors');
 const path = require('path');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- Firebase Init ---
-let serviceAccount;
-
-if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-  try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-  } catch (err) {
-    console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON');
-    process.exit(1);
-  }
-} else if (fs.existsSync(path.join(__dirname, 'serviceAccountKey.json'))) {
-  serviceAccount = require(path.join(__dirname, 'serviceAccountKey.json'));
-} else {
-  console.error('❌ No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT_KEY or add serviceAccountKey.json locally.');
-  process.exit(1);
-}
+// --- Firebase Admin SDK Initialization ---
+const serviceAccount = require('./serviceAccountKey.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -34,80 +15,125 @@ admin.initializeApp({
 const rtdb = admin.database();
 
 // --- Middleware ---
-app.use(cors());
 app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// --- Views setup ---
-const viewsPath = path.join(__dirname, 'views'); // Make sure 'views/' is next to index.js
-console.log('Views folder path:', viewsPath);
+app.use(express.urlencoded({ extended: true })); // for form data
 app.set('view engine', 'ejs');
-app.set('views', viewsPath);
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.static('public'));
 
-// --- Static files ---
-app.use(express.static(path.join(__dirname, 'public')));
+// --- Firebase Startup Check + Create 'buses' if not exists ---
+(async () => {
+  try {
+    await rtdb.ref('/').once('value');
+    console.log('✅ Successfully connected to Firebase Realtime Database!');
 
-// --- API Routes ---
-app.get('/hello', (req, res) => res.send('Hello, world!'));
+    const busesSnapshot = await rtdb.ref('buses').once('value');
+    if (!busesSnapshot.exists()) {
+      await rtdb.ref('buses').set({});
+      console.log('🚍 Created "buses" table in Firebase.');
+    }
+  } catch (error) {
+    console.error('❌ Firebase Init Error:', error.message);
+  }
+})();
 
-// Return JSON data for locations
+// --- Routes ---
+
+// Hello
+app.get('/hello', (req, res) => {
+  res.send('Hello, world!!!');
+});
+
+// Basic location data (if still needed)
 app.get('/data', async (req, res) => {
   try {
     const snapshot = await rtdb.ref('location').once('value');
     const items = snapshot.val();
     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
-    res.json({ items: itemsArray });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to fetch locations' });
+    res.render('data', {
+      message: 'This is your data endpoint, fetched from Firebase Realtime Database!',
+      items: itemsArray
+    });
+  } catch (error) {
+    res.status(500).send('Failed to fetch data');
   }
 });
 
-// Add location via API POST
-app.post('/add-location', async (req, res) => {
+// --- BUS FEATURE ROUTES ---
+
+// GET: Show all buses & their locations
+app.get('/bus-locations', async (req, res) => {
   try {
-    const newRef = await rtdb.ref('location').push(req.body);
-    res.status(201).json({ message: 'Location added', id: newRef.key });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to add location' });
+    const snapshot = await rtdb.ref('buses').once('value');
+    const buses = snapshot.val() || {};
+    const busesArray = Object.entries(buses).map(([id, data]) => ({ id, ...data }));
+    res.render('bus-locations', { buses: busesArray });
+  } catch (error) {
+    res.status(500).send('Failed to fetch bus data');
   }
 });
 
-// --- Website Routes ---
-// Home page
-app.get('/', (req, res) => res.render('home'));
+// GET: Add Bus form
+app.get('/add-bus-form', (req, res) => {
+  res.render('add-bus');
+});
 
-// Locations table page
-app.get('/locations', async (req, res) => {
+// POST: Add new bus
+app.post('/add-bus', async (req, res) => {
+  const { name, route } = req.body;
   try {
-    const snapshot = await rtdb.ref('location').once('value');
-    const items = snapshot.val();
-    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
-    res.render('location', { locations: itemsArray }); // Ensure file is location.ejs
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Failed to load locations');
+    const newBusRef = rtdb.ref('buses').push();
+    await newBusRef.set({
+      name,
+      route,
+      location: null
+    });
+    res.redirect('/bus-locations');
+  } catch (error) {
+    res.status(500).send('Failed to add bus');
   }
 });
 
-// Add location form page
-app.get('/add-location-form', (req, res) => res.render('add-location'));
-
-// Handle location submission from form
-app.post('/submit-location', async (req, res) => {
-  const { name, lat, lng } = req.body;
+// GET: Add Bus Location form
+app.get('/add-bus-location-form', async (req, res) => {
   try {
-    await rtdb.ref('location').push({ name, lat, lng });
-    res.redirect('/locations');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Failed to submit location');
+    const snapshot = await rtdb.ref('buses').once('value');
+    const buses = snapshot.val() || {};
+    res.render('add-bus-location', { buses });
+  } catch (error) {
+    res.status(500).send('Error loading form');
   }
 });
 
-// About page
-app.get('/about', (req, res) => res.render('about'));
+// POST: Add/Update location of a specific bus
+app.post('/add-bus-location', async (req, res) => {
+  const { busId, latitude, longitude } = req.body;
+  try {
+    await rtdb.ref(`buses/${busId}/location`).set({ latitude, longitude });
+    res.redirect('/bus-locations');
+  } catch (error) {
+    res.status(500).send('Failed to update bus location');
+  }
+});
+
+// --- Connectivity Checker ---
+app.get('/check-db', async (req, res) => {
+  try {
+    await rtdb.ref('/').once('value');
+    res.json({
+      status: 'connected',
+      message: 'Successfully connected to Firebase Realtime Database'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'disconnected',
+      message: 'Failed to connect to Firebase',
+      error: error.message
+    });
+  }
+});
 
 // --- Start Server ---
-app.listen(PORT, () => console.log(`✅ Running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+});

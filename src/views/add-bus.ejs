@@ -1,26 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Add New Bus</title>
-  <script src="/auth.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .form-container { max-width: 400px; }
-    input { margin: 10px 0; padding: 8px; width: 100%; }
-    button { padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; }
-    button:hover { background-color: #218838; }
-    a { margin-right: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Add New Bus</h1>
-  <form action="/admin/submit-bus" method="POST" class="form-container">
-    <label for="bus_id">Bus ID:</label>
-    <input type="text" id="bus_id" name="bus_id" required>
-    <label for="name">Bus Name:</label>
-    <input type="text" id="name" name="name" required>
-    <button type="submit">Add Bus</button>
-  </form>
-  <a href="/bus-locations">Back to Bus Locations</a>
-</body>
-</html>
+<!-- views/add-bus-form.ejs -->
+<form action="/add-bus" method="POST" class="container mt-5">
+  <h2>Add New Bus</h2>
+  <div class="mb-3">
+    <label for="bus_id" class="form-label">Bus ID</label>
+    <input type="text" class="form-control" id="bus_id" name="bus_id" required />
+  </div>
+  <div class="mb-3">
+    <label for="name" class="form-label">Bus Name</label>
+    <input type="text" class="form-control" id="name" name="name" required />
+  </div>
+  <button type="submit" class="btn btn-primary">Add Bus</button>
+</form>
