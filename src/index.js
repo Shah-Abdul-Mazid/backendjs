@@ -1,3 +1,4 @@
+// index.js
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -38,14 +39,15 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // --- Views setup ---
+const viewsPath = path.join(__dirname, 'views'); // Make sure 'views/' is next to index.js
+console.log('Views folder path:', viewsPath);
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', viewsPath);
 
 // --- Static files ---
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- API Routes ---
-
 app.get('/hello', (req, res) => res.send('Hello, world!'));
 
 // Return JSON data for locations
@@ -73,7 +75,6 @@ app.post('/add-location', async (req, res) => {
 });
 
 // --- Website Routes ---
-
 // Home page
 app.get('/', (req, res) => res.render('home'));
 
@@ -83,7 +84,7 @@ app.get('/locations', async (req, res) => {
     const snapshot = await rtdb.ref('location').once('value');
     const items = snapshot.val();
     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
-    res.render('location', { locations: itemsArray });  // Note: EJS file is location.ejs
+    res.render('location', { locations: itemsArray }); // Ensure file is location.ejs
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to load locations');
