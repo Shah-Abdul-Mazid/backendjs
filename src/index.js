@@ -1,19 +1,35 @@
-// index.js
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 // --- Firebase Init ---
-const serviceAccount = require(path.join(__dirname, './serviceAccountKey.json'));
+let serviceAccount;
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+  } catch (err) {
+    console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON');
+    process.exit(1);
+  }
+} else if (fs.existsSync(path.join(__dirname, 'src', 'serviceAccountKey.json'))) {
+  serviceAccount = require(path.join(__dirname, 'src', 'serviceAccountKey.json'));
+} else {
+  console.error('❌ No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT_KEY or add serviceAccountKey.json locally.');
+  process.exit(1);
+}
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://test-56b2b-default-rtdb.firebaseio.com' // Replace with your actual DB URL if different
+  databaseURL: 'https://test-56b2b-default-rtdb.firebaseio.com'
 });
+
 const rtdb = admin.database();
 
 // --- Middleware ---
@@ -23,71 +39,61 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // --- Views setup ---
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'src/views')); // points to src/views
+app.set('views', path.join(__dirname, 'src', 'views'));
 
 // --- Static files ---
-app.use(express.static(path.join(__dirname, 'src/public')));
+app.use(express.static(path.join(__dirname, 'src', 'public')));
 
-// ---------------------
-// 🔁 API Routes
-// ---------------------
+// --- API Routes ---
 
 app.get('/hello', (req, res) => res.send('Hello, world!'));
 
-// ✅ API: Get location data as JSON
+// Return JSON data for locations
 app.get('/data', async (req, res) => {
   try {
     const snapshot = await rtdb.ref('location').once('value');
     const items = snapshot.val();
-    const itemsArray = items
-      ? Object.keys(items).map(key => ({ id: key, ...items[key] }))
-      : [];
-    res.render('data', {
-      message: 'Live Bus Location Data',
-      items: itemsArray
-    });
+    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+    res.json({ items: itemsArray });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Failed to load data');
+    res.status(500).json({ message: 'Failed to fetch locations' });
   }
 });
 
-// ✅ API: Add location via raw POST (JSON)
+// Add location via API POST
 app.post('/add-location', async (req, res) => {
   try {
     const newRef = await rtdb.ref('location').push(req.body);
     res.status(201).json({ message: 'Location added', id: newRef.key });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to add location', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Failed to add location' });
   }
 });
 
-// ---------------------
-// 🌐 Website Routes
-// ---------------------
+// --- Website Routes ---
 
-// Home Page
+// Home page
 app.get('/', (req, res) => res.render('home'));
 
-// View all locations in a table (location.ejs)
+// Locations table page
 app.get('/locations', async (req, res) => {
   try {
     const snapshot = await rtdb.ref('location').once('value');
     const items = snapshot.val();
-    const itemsArray = items
-      ? Object.keys(items).map(key => ({ id: key, ...items[key] }))
-      : [];
-    res.render('location', { locations: itemsArray });
+    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+    res.render('location', { locations: itemsArray });  // Note: EJS file is location.ejs
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to load locations');
   }
 });
 
-// Form to add a location
+// Add location form page
 app.get('/add-location-form', (req, res) => res.render('add-location'));
 
-// Handle form submission from add-location.ejs
+// Handle location submission from form
 app.post('/submit-location', async (req, res) => {
   const { name, lat, lng } = req.body;
   try {
@@ -99,12 +105,8 @@ app.post('/submit-location', async (req, res) => {
   }
 });
 
-// About Page
+// About page
 app.get('/about', (req, res) => res.render('about'));
 
-// ---------------------
-// 🚀 Start Server
-// ---------------------
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+// --- Start Server ---
+app.listen(PORT, () => console.log(`✅ Running at http://localhost:${PORT}`));
