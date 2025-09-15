@@ -49,34 +49,60 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --- API Routes ---
 app.get('/hello', (req, res) => res.send('Hello, world!'));
 
-// Return JSON data for buses
-app.get('/data', async (req, res) => {
-  try {
-    const snapshot = await rtdb.ref('location').once('value');
-    const items = snapshot.val();
-    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
-    res.json({ items: itemsArray });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to fetch buses' });
-  }
-});
+// // Return JSON data for buses
+// app.get('/data', async (req, res) => {
+//   try {
+//     const snapshot = await rtdb.ref('buses').once('value');
+//     const items = snapshot.val();
+//     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+//     res.json({ items: itemsArray });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Failed to fetch buses' });
+//   }
+// });
 
-// Return JSON data for bus locations
-app.get('/bus-locations-data', async (req, res) => {
+// // Return JSON data for bus locations
+// app.get('/data', async (req, res) => {
+//   try {
+//     const snapshot = await rtdb.ref('bus_locations').once('value');
+//     const items = snapshot.val();
+//     const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+//     res.json({ items: itemsArray });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Failed to fetch bus locations' });
+//   }
+// });
+
+app.get('/data', async (req, res) => {
   try {
     const snapshot = await rtdb.ref('bus_locations').once('value');
     const items = snapshot.val();
-    const itemsArray = items ? Object.keys(items).map(key => ({ id: key, ...items[key] })) : [];
+    const itemsArray = items
+      ? Object.keys(items).map(key => ({
+          id: key,
+          bus_id: items[key].bus_id,
+          latitude: items[key].latitude,
+          longitude: items[key].longitude,
+          recorded_at: items[key].recorded_at || 'N/A'
+        }))
+      : [];
+
     res.json({ items: itemsArray });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Failed to fetch bus locations' });
+    res.status(500).json({ message: 'Failed to fetch bus data' });
   }
 });
 
+app.get('/buslocations', (req, res) => {
+  res.render('location'); // this renders views/location.ejs
+});
+
+
 // Add bus via API POST
-app.post('/add-bus', async (req, res) => {
+app.post('/addbusforms', async (req, res) => {
   const { bus_id, name } = req.body;
   try {
     // Check if 'buses' reference exists, create if it doesn't
@@ -85,11 +111,11 @@ app.post('/add-bus', async (req, res) => {
     if (!snapshot.exists()) {
       await busesRef.set({}); // Create empty object to initialize the reference
       // Redirect back to the form to allow insertion
-      return res.redirect('/add-bus-form');
+      return res.redirect('/addbusforms');
     }
     // If table exists, proceed with insertion
     await busesRef.push({ bus_id, name });
-    res.redirect('/bus-locations');
+    res.redirect('/addbusforms');
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to add bus');
@@ -97,7 +123,7 @@ app.post('/add-bus', async (req, res) => {
 });
 
 // Add location via API POST
-app.post('/add-location', async (req, res) => {
+app.post('/addbuslocationforms', async (req, res) => {
   const { bus_id, latitude, longitude } = req.body;
   try {
     // Check if 'bus_locations' reference exists, create if it doesn't
@@ -107,7 +133,7 @@ app.post('/add-location', async (req, res) => {
       await locationsRef.set({}); // Create empty object to initialize the reference
     }
     await locationsRef.push({ bus_id, latitude, longitude });
-    res.redirect('/bus-locations');
+    res.redirect('/addbuslocationforms');
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to add location');
@@ -125,7 +151,7 @@ app.post('/submit-bus-location', async (req, res) => {
       await locationsRef.set({}); // Create empty object to initialize the reference
     }
     await locationsRef.push({ bus_id, latitude, longitude, recorded_at });
-    res.redirect('/bus-locations');
+    res.redirect('/addbuslocationforms');
   } catch (err) {
     console.error(err);
     res.status(500).send('Failed to submit bus location');
@@ -137,7 +163,7 @@ app.post('/submit-bus-location', async (req, res) => {
 app.get('/', (req, res) => res.render('home'));
 
 // Bus locations page
-app.get('/bus-locations', async (req, res) => {
+app.get('/data', async (req, res) => {
   try {
     const snapshot = await rtdb.ref('bus_locations').once('value');
     const items = snapshot.val();
@@ -150,13 +176,10 @@ app.get('/bus-locations', async (req, res) => {
 });
 
 // Add bus form page
-app.get('/add-bus-form', (req, res) => res.render('add-bus-form'));
-
-// Add location form page
-app.get('/add-location-form', (req, res) => res.render('add-location'));
+app.get('/addbusforms', (req, res) => res.render('addbusforms'));
 
 // Add bus location form page
-app.get('/add-bus-location', (req, res) => res.render('add-bus-location'));
+app.get('/addbuslocationforms', (req, res) => res.render('addbuslocationforms'));
 
 // About page
 app.get('/about', (req, res) => res.render('about'));
