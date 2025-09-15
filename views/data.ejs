@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bus Locations</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    h1 { color: #333; }
+    table { 
+      border-collapse: collapse; 
+      width: 80%; 
+      margin: 20px auto; 
+      border: 1px solid #ddd;
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 10px; 
+      text-align: left; 
+    }
+    th { 
+      background-color: #4CAF50; 
+      color: white; 
+    }
+    tr:nth-child(even) { 
+      background-color: #f2f2f2; 
+    }
+    tr:hover { 
+      background-color: #ddd; 
+    }
+  </style>
+</head>
+<body>
+  <h1><%= message %></h1>
+  <table>
+    <tr>
+      <th>Location ID</th>
+      <th>Bus ID</th>
+      <th>Latitude</th>
+      <th>Longitude</th>
+      <th>Recorded At</th>
+    </tr>
+    <% items.forEach(item => { %>
+      <tr>
+        <td><%= item.location_id %></td>
+        <td><%= item.bus_id %></td>
+        <td><%= item.latitude %></td>
+        <td><%= item.longitude %></td>
+        <td><%= item.recorded_at %></td>
+      </tr>
+    <% }); %>
+    <% if (items.length === 0) { %>
+      <tr>
+        <td colspan="5">No data available</td>
+      </tr>
+    <% } %>
+  </table>
+</body>
+</html>
