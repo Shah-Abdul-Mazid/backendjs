@@ -94,7 +94,7 @@ app.post('/update_gps', async (req, res) => {
 
     const recorded_at = new Date().toISOString();
 
-    // Push new location data under 'bus_locations'
+    
     const ref = await rtdb.ref('bus_locations').push({
       bus_id,
       latitude,
