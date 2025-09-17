@@ -2,7 +2,6 @@ const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
 const path = require('path');
-const bodyParser = require('body-parser');
 const fs = require('fs');
 
 const app = express();
@@ -35,7 +34,7 @@ const rtdb = admin.database();
 // --- Middleware ---
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true }));
 
 // --- Views setup ---
 const viewsPath = path.join(__dirname, 'views');
@@ -53,22 +52,35 @@ app.get('/hello', (req, res) => res.send('Hello, world!'));
 
 // POST endpoint for ESP32 / Arduino to send GPS data
 app.post('/update_gps', async (req, res) => {
+  console.log('📡 Incoming /update_gps headers:', req.headers);
+  console.log('📡 Incoming /update_gps body:', req.body);
+
   const { bus_id, latitude, longitude } = req.body;
 
   // Validate input data
   if (!bus_id || latitude === undefined || longitude === undefined) {
+    console.error('❌ Missing required fields:', { bus_id, latitude, longitude });
     return res.status(400).json({ message: 'Missing required fields: bus_id, latitude, longitude' });
   }
 
-  // Optional: validate latitude & longitude number ranges
+  // Validate latitude & longitude types and ranges
   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    console.error('❌ Invalid types:', { latitude: typeof latitude, longitude: typeof longitude });
     return res.status(400).json({ message: 'Latitude and longitude must be numbers' });
   }
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    console.error('❌ Out of range:', { latitude, longitude });
     return res.status(400).json({ message: 'Latitude or longitude out of range' });
   }
 
   try {
+    // Validate bus_id exists in buses
+    const busSnapshot = await rtdb.ref('buses').orderByChild('bus_id').equalTo(bus_id).once('value');
+    if (!busSnapshot.exists()) {
+      console.error('❌ Invalid bus_id:', bus_id);
+      return res.status(400).json({ message: 'Invalid bus_id' });
+    }
+
     const recorded_at = new Date().toISOString();
 
     // Push new location data under 'bus_locations'
@@ -83,7 +95,7 @@ app.post('/update_gps', async (req, res) => {
     res.status(200).json({ message: 'GPS data saved successfully', key: ref.key });
   } catch (err) {
     console.error('❌ Failed to save GPS data:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
 
