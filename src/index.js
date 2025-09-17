@@ -37,6 +37,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Views setup ---
+
+
 const viewsPath = path.join(__dirname, 'views');
 console.log('Views folder path:', viewsPath);
 app.set('view engine', 'ejs');
@@ -52,10 +54,13 @@ app.get('/hello', (req, res) => res.send('Hello, world!'));
 
 // POST endpoint for ESP32 / Arduino to send GPS data
 app.post('/update_gps', async (req, res) => {
-  console.log('📡 Incoming /update_gps headers:', req.headers);
-  console.log('📡 Incoming /update_gps body:', req.body);
+  console.log('📡 Incoming /update_gps request:', {
+    clientIp: req.ip,
+    headers: req.headers,
+    body: req.body
+  });
 
-  const { bus_id, latitude, longitude } = req.body;
+  let { bus_id, latitude, longitude } = req.body;
 
   // Validate input data
   if (!bus_id || latitude === undefined || longitude === undefined) {
@@ -63,10 +68,14 @@ app.post('/update_gps', async (req, res) => {
     return res.status(400).json({ message: 'Missing required fields: bus_id, latitude, longitude' });
   }
 
+  // Convert latitude/longitude to numbers if strings
+  latitude = typeof latitude === 'string' ? parseFloat(latitude) : latitude;
+  longitude = typeof longitude === 'string' ? parseFloat(longitude) : longitude;
+
   // Validate latitude & longitude types and ranges
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-    console.error('❌ Invalid types:', { latitude: typeof latitude, longitude: typeof longitude });
-    return res.status(400).json({ message: 'Latitude and longitude must be numbers' });
+  if (isNaN(latitude) || isNaN(longitude)) {
+    console.error('❌ Invalid types after parsing:', { latitude, longitude });
+    return res.status(400).json({ message: 'Latitude and longitude must be valid numbers' });
   }
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
     console.error('❌ Out of range:', { latitude, longitude });
@@ -74,12 +83,14 @@ app.post('/update_gps', async (req, res) => {
   }
 
   try {
-    // Validate bus_id exists in buses
+    // Optional: Validate bus_id exists in buses (comment out for testing)
+    /*
     const busSnapshot = await rtdb.ref('buses').orderByChild('bus_id').equalTo(bus_id).once('value');
     if (!busSnapshot.exists()) {
       console.error('❌ Invalid bus_id:', bus_id);
       return res.status(400).json({ message: 'Invalid bus_id' });
     }
+    */
 
     const recorded_at = new Date().toISOString();
 
