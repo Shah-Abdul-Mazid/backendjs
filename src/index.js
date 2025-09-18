@@ -92,9 +92,13 @@ app.post('/update_gps', async (req, res) => {
     }
     */
 
-    const recorded_at = new Date().toISOString();
+    const { format, utcToZonedTime } = require("date-fns-tz");
 
-    
+    const tz = "Asia/Dhaka";
+    const zonedDate = utcToZonedTime(new Date(), tz);
+    const recorded_at = format(zonedDate, "yyyy-MM-dd HH:mm:ss", { timeZone: tz });
+
+        
     const ref = await rtdb.ref('bus_locations').push({
       bus_id,
       latitude,
